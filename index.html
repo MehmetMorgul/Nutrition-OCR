@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NutritionOCR</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: url('/background/background3.jpg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            position: relative;
+        }
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.6);
+            z-index: -1;
+        }
+        #upload-section {
+            margin-bottom: 50px;
+        }
+        #buttons {
+            display: flex;
+            gap: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #image-preview {
+            margin-top: 20px;
+            max-width: 80%;
+            max-height: 60vh;
+        }
+        #text-results {
+            margin-top: 20px;
+            max-width: 80%;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 60%;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        #clear-cache-button {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            background-color: red;
+            color: white;
+        }
+        #comparison {
+            display: flex;
+            justify-content: space-between;
+            width: 80%;
+            margin-top: 20px;
+        }
+        #previous-text {
+            width: 45%;
+            border-right: 1px solid #000;
+            padding-right: 20px;
+        }
+        #current-text {
+            width: 45%;
+            padding-left: 20px;
+        }
+        .name-cell {
+            color: grey;
+        }
+        .name-cell.match {
+            color: green;
+        }
+        .name-cell.nomatch {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div id="upload-section">
+        <form id="upload-form" enctype="multipart/form-data">
+            <input type="file" name="file" accept="image/*" id="file-input">
+            <button type="button" onclick="uploadFile()">Upload</button>
+        </form>
+    </div>
+    <div id="buttons">
+        <button onclick="openModal('symbolsModal')">Symbols of Nutrition</button>
+        <button onclick="openModal('nutritionModal')">Nutrition Information</button>
+        <button id="process-image-button" onclick="processImage()">Process Image</button>
+        <button id="predict-image-button" onclick="predictImage()">Predict Image</button>
+        <button id="compare-button" onclick="openCompareModal()">Compare</button>
+    </div>
+    <img id="image-preview" src="" alt="Image preview"/>
+    <div id="text-results"></div>
+
+    <div id="comparison">
+        <div id="previous-text"></div>
+        <div id="current-text"></div>
+    </div>
+
+    <div id="symbolsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('symbolsModal')">&times;</span>
+            <h2>Symbols of Nutrition Schema</h2>
+            <table border="1" class="dataframe">
+                <thead>
+                    <tr style="text-align: left;">
+                        <th>Name of Symbols</th>
+                        <th>Symbols</th>
+                        <th>Explanation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>CE marking</td>
+                        <td><img src="/symbols/CE8.jpg" alt="CE Marking" style="width:45px;height:45px;"/></td>
+                        <td>The "CE" mark is a mandatory certification mark that indicates conformity with health, safety, and environmental protection standards for products.</td>
+                    </tr>
+                    <tr>
+                        <td>Food Safe Symbol</td>
+                        <td><img src="/symbols/GF3.PNG" alt="Food Safe Symbol" style="width:45px;height:45px;"/></td>
+                        <td>The symbol indicates that the material used in the product is safe for food contact.</td>
+                    </tr>
+                    <tr>
+                        <td>Green Dot</td>
+                        <td><img src="/symbols/greendot2.PNG" alt="Green Dot" style="width:45px;height:45px;"/></td>
+                        <td>Indicates that the producer of the packaging has contributed to a recycling system for the collection and recovery of packaging materials.</td>
+                    </tr>
+                    <tr>
+                        <td>Organic farming Symbol</td>
+                        <td><img src="/symbols/OR1.PNG" alt="Organic farming Symbol" style="width:45px;height:45px;"/></td>
+                        <td>It is a form of agricultural production that does not use synthetic chemicals, fertilizers, or genetically modified organisms.</td>
+                    </tr>
+                    <tr>
+                        <td>Period After Opening</td>
+                        <td><img src="/symbols/af15.PNG" alt="Period After Opening" style="width:45px;height:45px;"/></td>
+                        <td>The period of time that a product remains suitable for use after it has been opened.</td>
+                    </tr>
+                    <tr>
+                        <td>Radura</td>
+                        <td><img src="/symbols/RADURA9.png" alt="Radura" style="width:45px;height:45px;"/></td>
+                        <td>Radura is an effective technology used to ensure food safety by eliminating insects and pathogens to extend shelf life.</td>
+                    </tr>
+                    <tr>
+                        <td>Recycle</td>
+                        <td><img src="/symbols/RE5.jpg" alt="Recycle" style="width:45px;height:45px;"/></td>
+                        <td>Recycling symbol indicate that a material is recyclable.</td>
+                    </tr>
+                    <tr>
+                        <td>Tidyman</td>
+                        <td><img src="/symbols/tidyman5.jpg" alt="Tidyman" style="width:45px;height:45px;"/></td>
+                        <td>It doesn't relate to recycling but is a reminder to be a good citizen, disposing of the item in the most appropriate manner.</td>
+                    </tr>
+                    <tr>
+                        <td>Yerli Üretim</td>
+                        <td><img src="/symbols/yer8_modified_3.png" alt="Yerli Üretim" style="width:45px;height:45px;"/></td>
+                        <td>Made in Turkey</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="nutritionModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('nutritionModal')">&times;</span>
+            <h2>Nutrition Information Schema</h2>
+            <table border="1" class="dataframe" id="nutrition-table">
+                <thead>
+                    <tr style="text-align: left;">
+                        <th>Name</th>
+                        <th>Harmful</th>
+                        <th>Explanation</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="name-cell">Yağ / Calories</td>
+                        <td>No</td>
+                        <td>Fat is chemically known as triglyceride, an ester of glycerin and three fatty acids. It is one of the 3 essential nutrients and we need to consume it.</td>
+                    </tr>
+                    <tr>
+                        <td class="name-cell">Doymuş Yağ / Saturates</td>
+                        <td>Yes</td>
+                        <td>Saturated fat is a type of fat in which the fatty acid chains have all or predominantly single bonds. The World Health Organization has advocated reducing saturated fat intake to promote health and reduce the risk of disease.</td>
+                    </tr>
+                    <tr>
+                        <td class="name-cell">Trans Yağ / Trans</td>
+                        <td>Yes</td>
+                        <td>Trans fat is the common name given to trans-isomer (E-isomer) unsaturated fatty acids. Consumption of trans fats is harmful because excess consumption is harmful.</td>
+                    </tr>
+                    <tr>
+                        <td class="name-cell">Karbonhidrat / Carbohydrate</td>
+                        <td>No</td>
+                        <td>Carbohydrates are central to the diet and are found in a wide variety of natural and processed foods.</td>
+                    </tr>
+                    <tr>
+                        <td class="name-cell">Şekerler / Sugars</td>
+                        <td>Yes</td>
+                        <td>Sugar or sucrose is the generic name for sweet and soluble carbohydrates used in most foods and beverages.</td>
+                    </tr>
+                    <tr>
+                        <td class="name-cell">Lif / Fibre</td>
+                        <td>No</td>
+                        <td>Any type of carbohydrate that cannot be digested by the body is called fiber.</td>
+                    </tr>
+                    <tr>
+                        <td class="name-cell">Protein</td>
+                        <td>No</td>
+                        <td>They are large biomolecules and macromolecules that contain one or more long chains of amino acid residues. It is one of the 3 essential nutrients and we need to consume it.</td>
+                    </tr>
+                    <tr>
+                        <td class="name-cell">Tuz / Salt</td>
+                        <td>No</td>
+                        <td>The simple chemical compound sodium chloride (NaCl), also known as table salt, is a foodstuff that has been of great importance to humans for centuries.</td>
+                    </tr>
+                    <tr>
+                        <td class="name-cell">Enerji / Calories</td>
+                        <td>Yes</td>
+                        <td>The amount of energy or "fuel" released by burning food is called "calories". We use these calories to sustain our daily lives.</td>
+                    </tr>
+                    <tr>
+                        <td class="name-cell">Kalsiyum / Calcium</td>
+                        <td>No</td>
+                        <td>Calcium plays an important role in the physiological chemistry of living things. In the human body, 99% of calcium is found in bones and teeth.</td>
+                    </tr>
+                    <tr>
+                        <td class="name-cell">A Vitamini</td>
+                        <td>No</td>
+                        <td>Vitamin A is also important for the maintenance and repair of tissues, the growth of new cells and the formation of bones and teeth.</td>
+                    </tr>
+                    <tr>
+                        <td class="name-cell">D Vitamini</td>
+                        <td>No</td>
+                        <td>Vitamin D, also known as calciferol. It is one of the fat-soluble vitamins.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="compareModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('compareModal')">&times;</span>
+            <h2>Select a Previous Text</h2>
+            <div id="previous-texts"></div>
+        </div>
+    </div>
+
+    <button id="clear-cache-button" onclick="clearFiles()">Clear Cache</button>
+
+    <script>
+        let currentText = '';
+
+        // Function to upload a file
+        async function uploadFile() {
+            const input = document.getElementById('file-input');
+            const file = input.files[0];
+            if (!file) {
+                alert('Please select a file first.');
+                return;
+            }
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('File upload failed');
+                }
+
+                const result = await response.json();
+                document.getElementById('image-preview').src = result.url;
+                document.getElementById('process-image-button').dataset.imageUrl = result.url;
+                document.getElementById('predict-image-button').dataset.imageUrl = result.url;
+            } catch (error) {
+                alert('Error uploading file: ' + error.message);
+            }
+        }
+
+        // Function to process the uploaded image
+        async function processImage() {
+            const button = document.getElementById('process-image-button');
+            const imageUrl = button.dataset.imageUrl;
+
+            if (!imageUrl) {
+                alert('Please upload an image first.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/process_image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image_url: imageUrl })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Image processing failed');
+                }
+
+                const result = await response.json();
+                document.getElementById('image-preview').src = result.processed_url;
+                document.getElementById('text-results').innerText = result.text_results;
+                currentText = result.text_results;
+            } catch (error) {
+                alert('Error processing image: ' + error.message);
+            }
+        }
+
+        // Function to open a modal
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = "block";
+            if (modalId === 'nutritionModal') {
+                updateNutritionSchemaColors();
+            }
+        }
+
+        // Function to close a modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                closeModal(event.target.id);
+            }
+        }
+
+        // Function to predict the image
+        async function predictImage() {
+            const button = document.getElementById('predict-image-button');
+            const imageUrl = button.dataset.imageUrl;
+
+            if (!imageUrl) {
+                alert('Please upload an image first.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/predict_image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image_url: imageUrl })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Image prediction failed');
+                }
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                document.getElementById('image-preview').src = url;
+            } catch (error) {
+                alert('Error predicting image: ' + error.message);
+            }
+        }
+
+        // Function to clear all files
+        async function clearFiles() {
+            try {
+                const response = await fetch('/clear_files', {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to clear files');
+                }
+
+                alert('All files have been cleared.');
+                document.getElementById('image-preview').src = '';
+                document.getElementById('text-results').innerText = '';
+                document.getElementById('previous-text').innerText = '';
+                document.getElementById('current-text').innerText = '';
+                currentText = '';
+                updateNutritionSchemaColors();
+            } catch (error) {
+                alert('Error clearing files: ' + error.message);
+            }
+        }
+
+        // Function to open the compare modal
+        async function openCompareModal() {
+            try {
+                const response = await fetch('/text_records');
+                if (!response.ok) {
+                    throw new Error('Failed to retrieve text records');
+                }
+                const texts = await response.json();
+
+                const container = document.getElementById('previous-texts');
+                container.innerHTML = '';
+
+                texts.forEach(text => {
+                    const button = document.createElement('button');
+                    button.innerText = text.filename;
+                    button.onclick = () => compareTexts(text.content);
+                    container.appendChild(button);
+                });
+
+                openModal('compareModal');
+            } catch (error) {
+                alert('Error opening compare modal: ' + error.message);
+            }
+        }
+
+        // Function to compare texts
+        function compareTexts(previousText) {
+            const comparison = `
+                <div style="display: flex; justify-content: space-between; width: 100%;">
+                    <div style="width: 45%; border-right: 1px solid #000; padding-right: 20px;">
+                        <h3>Previous Text:</h3>
+                        <pre>${previousText}</pre>
+                    </div>
+                    <div style="width: 45%; padding-left: 20px;">
+                        <h3>Current Text:</h3>
+                        <pre>${currentText}</pre>
+                    </div>
+                </div>
+            `;
+            document.getElementById('text-results').innerHTML = comparison;
+            closeModal('compareModal');
+        }
+
+        // Function to update nutrition schema colors based on detected texts
+        async function updateNutritionSchemaColors() {
+            try {
+                const response = await fetch('/detected_texts');
+                if (!response.ok) {
+                    throw new Error('Failed to retrieve detected texts');
+                }
+                const detectedTexts = await response.json();
+
+                const cells = document.querySelectorAll('.name-cell');
+                cells.forEach(cell => {
+                    const text = cell.textContent.trim();
+                    if (detectedTexts.length === 0) {
+                        cell.classList.remove('match', 'nomatch');
+                        cell.classList.add('default');
+                    } else {
+                        const parts = text.split('/');
+                        const matched = parts.some(part => detectedTexts.some(detectedText => detectedText.toLowerCase().includes(part.trim().toLowerCase())));
+                        if (matched) {
+                            cell.classList.remove('default', 'nomatch');
+                            cell.classList.add('match');
+                        } else {
+                            cell.classList.remove('default', 'match');
+                            cell.classList.add('nomatch');
+                        }
+                    }
+                });
+            } catch (error) {
+                alert('Error updating nutrition schema colors: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
